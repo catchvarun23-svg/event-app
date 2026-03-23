@@ -3,7 +3,10 @@ export default async function handler(req, res) {
 
   try {
     const response = await fetch(apiUrl);
-    const data = await response.json();
+    const text = await response.text(); // IMPORTANT
+
+    const data = JSON.parse(text); // handle GAS response
+
     res.status(200).json(data);
   } catch (error) {
     res.status(500).json({ error: "Failed to load event details" });
