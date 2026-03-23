@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = "/api/event";
 const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'change-me';
 
 const emptyMember = () => ({ name: '', relation: '', food: 'No Preference', notes: '' });
