@@ -43,13 +43,14 @@ export default function App() {
   }, []);
 
   async function fetchEvent() {
-    if (!API_URL) {
-      setError('Missing VITE_API_URL');
-      setLoadingEvent(false);
-      return;
-    }
+    setLoadingEvent(true);
     try {
       const res = await fetch(EVENT_API_URL);
+
+      if (!res.ok) {
+        throw new Error('Failed to fetch event');
+      }
+
       const data = await res.json();
       setEventData((prev) => ({ ...prev, ...data }));
       setError('');
@@ -67,6 +68,7 @@ export default function App() {
     form.family_members.forEach((member, index) => {
       const key = member.name.trim().toLowerCase();
       if (!key) return;
+
       if (seen.has(key)) {
         duplicates.add(index);
         duplicates.add(seen.get(key));
@@ -85,20 +87,26 @@ export default function App() {
   function updateMember(index, field, value) {
     setForm((prev) => ({
       ...prev,
-      family_members: prev.family_members.map((m, i) => (i === index ? { ...m, [field]: value } : m))
+      family_members: prev.family_members.map((m, i) =>
+        i === index ? { ...m, [field]: value } : m
+      )
     }));
   }
 
   function addMember() {
-    setForm((prev) => ({ ...prev, family_members: [...prev.family_members, emptyMember()] }));
+    setForm((prev) => ({
+      ...prev,
+      family_members: [...prev.family_members, emptyMember()]
+    }));
   }
 
   function removeMember(index) {
     setForm((prev) => ({
       ...prev,
-      family_members: prev.family_members.length === 1
-        ? prev.family_members
-        : prev.family_members.filter((_, i) => i !== index)
+      family_members:
+        prev.family_members.length === 1
+          ? prev.family_members
+          : prev.family_members.filter((_, i) => i !== index)
     }));
   }
 
@@ -128,12 +136,19 @@ export default function App() {
         body: JSON.stringify(payload)
       });
 
-      const text = await res.text();
-      let parsed;
-      try { parsed = JSON.parse(text); } catch { parsed = { status: 'success', message: text }; }
+      if (!res.ok) {
+        throw new Error('RSVP request failed');
+      }
+
+      const parsed = await res.json();
 
       if (parsed.status === 'duplicate') {
         setError(`Duplicate found: ${parsed.duplicates.join(', ')}`);
+        return;
+      }
+
+      if (parsed.status !== 'success') {
+        setError(parsed.message || 'Could not submit RSVP.');
         return;
       }
 
@@ -168,9 +183,11 @@ export default function App() {
         })
       });
 
-      const text = await res.text();
-      let parsed;
-      try { parsed = JSON.parse(text); } catch { parsed = { status: 'success', message: text }; }
+      if (!res.ok) {
+        throw new Error('Admin update failed');
+      }
+
+      const parsed = await res.json();
 
       if (parsed.status !== 'success') {
         setError(parsed.message || 'Could not update event.');
@@ -188,6 +205,9 @@ export default function App() {
 
   function unlockAdmin(e) {
     e.preventDefault();
+    setMessage('');
+    setError('');
+
     if (adminPass === ADMIN_PASSWORD) {
       setAdminUnlocked(true);
       setError('');
@@ -203,12 +223,17 @@ export default function App() {
         <span className="tag">One Event RSVP App</span>
         <h1>{loadingEvent ? 'Loading event...' : (eventData.event_name || 'Eid Celebration')}</h1>
         <p><strong>Venue:</strong> {eventData.venue || '68 Macarthur St'}</p>
-        <p><strong>Date:</strong> {eventData.event_date || 'Add in admin page'} &nbsp; <strong>Time:</strong> {eventData.event_time || 'Add in admin page'}</p>
+        <p>
+          <strong>Date:</strong> {eventData.event_date || 'Add in admin page'}
+          &nbsp;&nbsp;
+          <strong>Time:</strong> {eventData.event_time || 'Add in admin page'}
+        </p>
       </div>
 
       <div className="grid">
         <div className="card">
           <h2 className="section-title">Guest RSVP Form</h2>
+
           {message ? <div className="success">{message}</div> : null}
           {error ? <div className="error">{error}</div> : null}
 
@@ -222,23 +247,37 @@ export default function App() {
           <form onSubmit={submitRSVP}>
             <div className="field">
               <label>Main Guest Name</label>
-              <input value={form.name} onChange={(e) => updateField('name', e.target.value)} required />
+              <input
+                value={form.name}
+                onChange={(e) => updateField('name', e.target.value)}
+                required
+              />
             </div>
 
             <div className="row">
               <div className="field">
                 <label>Phone</label>
-                <input value={form.phone} onChange={(e) => updateField('phone', e.target.value)} />
+                <input
+                  value={form.phone}
+                  onChange={(e) => updateField('phone', e.target.value)}
+                />
               </div>
               <div className="field">
                 <label>Email</label>
-                <input type="email" value={form.email} onChange={(e) => updateField('email', e.target.value)} />
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => updateField('email', e.target.value)}
+                />
               </div>
             </div>
 
             <div className="field">
               <label>Attendance</label>
-              <select value={form.attendance} onChange={(e) => updateField('attendance', e.target.value)}>
+              <select
+                value={form.attendance}
+                onChange={(e) => updateField('attendance', e.target.value)}
+              >
                 <option>Yes</option>
                 <option>No</option>
                 <option>Maybe</option>
@@ -248,29 +287,54 @@ export default function App() {
             <div className="status-box">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <strong>Family Members</strong>
-                <button type="button" className="secondary small" onClick={addMember}>+ Add member</button>
+                <button type="button" className="secondary small" onClick={addMember}>
+                  + Add member
+                </button>
               </div>
+
               <div className="note">Duplicate names in this submission will be highlighted.</div>
+
               {form.family_members.map((member, index) => (
-                <div key={index} className={`member ${duplicateIndexes.has(index) ? 'duplicate' : ''}`}>
+                <div
+                  key={index}
+                  className={`member ${duplicateIndexes.has(index) ? 'duplicate' : ''}`}
+                >
                   <div className="member-head">
                     <strong>Member {index + 1}</strong>
-                    <button type="button" className="ghost small" onClick={() => removeMember(index)}>Remove</button>
+                    <button
+                      type="button"
+                      className="ghost small"
+                      onClick={() => removeMember(index)}
+                    >
+                      Remove
+                    </button>
                   </div>
+
                   <div className="row">
                     <div className="field">
                       <label>Name</label>
-                      <input value={member.name} onChange={(e) => updateMember(index, 'name', e.target.value)} />
+                      <input
+                        value={member.name}
+                        onChange={(e) => updateMember(index, 'name', e.target.value)}
+                      />
                     </div>
                     <div className="field">
                       <label>Relation</label>
-                      <input value={member.relation} onChange={(e) => updateMember(index, 'relation', e.target.value)} placeholder="Self / Spouse / Child" />
+                      <input
+                        value={member.relation}
+                        onChange={(e) => updateMember(index, 'relation', e.target.value)}
+                        placeholder="Self / Spouse / Child"
+                      />
                     </div>
                   </div>
+
                   <div className="row">
                     <div className="field">
                       <label>Food Preference</label>
-                      <select value={member.food} onChange={(e) => updateMember(index, 'food', e.target.value)}>
+                      <select
+                        value={member.food}
+                        onChange={(e) => updateMember(index, 'food', e.target.value)}
+                      >
                         <option>Veg</option>
                         <option>Non-Veg</option>
                         <option>Vegan</option>
@@ -281,7 +345,11 @@ export default function App() {
                     </div>
                     <div className="field">
                       <label>Notes</label>
-                      <input value={member.notes} onChange={(e) => updateMember(index, 'notes', e.target.value)} placeholder="Allergy / special note" />
+                      <input
+                        value={member.notes}
+                        onChange={(e) => updateMember(index, 'notes', e.target.value)}
+                        placeholder="Allergy / special note"
+                      />
                     </div>
                   </div>
                 </div>
@@ -290,7 +358,10 @@ export default function App() {
 
             <div className="field">
               <label>Suggestions</label>
-              <textarea value={form.suggestion} onChange={(e) => updateField('suggestion', e.target.value)} />
+              <textarea
+                value={form.suggestion}
+                onChange={(e) => updateField('suggestion', e.target.value)}
+              />
             </div>
 
             <button className="primary" type="submit">Submit RSVP</button>
@@ -316,11 +387,16 @@ export default function App() {
           {showAdmin && (
             <div className="card" style={{ marginTop: 16 }}>
               <h2 className="section-title">Admin Event Update</h2>
+
               {!adminUnlocked ? (
                 <form onSubmit={unlockAdmin}>
                   <div className="field">
                     <label>Admin Password</label>
-                    <input type="password" value={adminPass} onChange={(e) => setAdminPass(e.target.value)} />
+                    <input
+                      type="password"
+                      value={adminPass}
+                      onChange={(e) => setAdminPass(e.target.value)}
+                    />
                   </div>
                   <button className="primary" type="submit">Unlock</button>
                 </form>
@@ -328,33 +404,56 @@ export default function App() {
                 <form onSubmit={updateEvent}>
                   <div className="field">
                     <label>Event Name</label>
-                    <input value={eventData.event_name || ''} onChange={(e) => setEventData((p) => ({ ...p, event_name: e.target.value }))} />
+                    <input
+                      value={eventData.event_name || ''}
+                      onChange={(e) => setEventData((p) => ({ ...p, event_name: e.target.value }))}
+                    />
                   </div>
+
                   <div className="row">
                     <div className="field">
                       <label>Event Date</label>
-                      <input value={eventData.event_date || ''} onChange={(e) => setEventData((p) => ({ ...p, event_date: e.target.value }))} />
+                      <input
+                        value={eventData.event_date || ''}
+                        onChange={(e) => setEventData((p) => ({ ...p, event_date: e.target.value }))}
+                      />
                     </div>
                     <div className="field">
                       <label>Event Time</label>
-                      <input value={eventData.event_time || ''} onChange={(e) => setEventData((p) => ({ ...p, event_time: e.target.value }))} />
+                      <input
+                        value={eventData.event_time || ''}
+                        onChange={(e) => setEventData((p) => ({ ...p, event_time: e.target.value }))}
+                      />
                     </div>
                   </div>
+
                   <div className="field">
                     <label>Venue</label>
-                    <input value={eventData.venue || ''} onChange={(e) => setEventData((p) => ({ ...p, venue: e.target.value }))} />
+                    <input
+                      value={eventData.venue || ''}
+                      onChange={(e) => setEventData((p) => ({ ...p, venue: e.target.value }))}
+                    />
                   </div>
+
                   <div className="field">
                     <label>Menu</label>
-                    <textarea value={eventData.menu || ''} onChange={(e) => setEventData((p) => ({ ...p, menu: e.target.value }))} />
+                    <textarea
+                      value={eventData.menu || ''}
+                      onChange={(e) => setEventData((p) => ({ ...p, menu: e.target.value }))}
+                    />
                   </div>
+
                   <div className="field">
                     <label>Status</label>
-                    <select value={eventData.event_status || 'Active'} onChange={(e) => setEventData((p) => ({ ...p, event_status: e.target.value }))}>
+                    <select
+                      value={eventData.event_status || 'Active'}
+                      onChange={(e) => setEventData((p) => ({ ...p, event_status: e.target.value }))}
+                    >
                       <option>Active</option>
                       <option>Closed</option>
                     </select>
                   </div>
+
                   <button className="primary" type="submit" disabled={adminSaving}>
                     {adminSaving ? 'Saving...' : 'Update Event'}
                   </button>
