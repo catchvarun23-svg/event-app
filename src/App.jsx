@@ -220,7 +220,7 @@ export default function App() {
   return (
     <div className="container">
       <div className="hero">
-        <span className="tag">One Event RSVP App</span>
+        <span className="tag">One Event RSVP App v2</span>
         <h1>{loadingEvent ? 'Loading event...' : (eventData.event_name || 'Eid Celebration')}</h1>
         <p><strong>Venue:</strong> {eventData.venue || '68 Macarthur St'}</p>
         <p>
