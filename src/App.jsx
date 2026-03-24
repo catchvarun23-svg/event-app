@@ -335,11 +335,9 @@ export default function App() {
                         value={member.food}
                         onChange={(e) => updateMember(index, 'food', e.target.value)}
                       >
-                        <option>Veg</option>
-                        <option>Non-Veg</option>
-                        <option>Vegan</option>
-                        <option>Jain</option>
-                        <option>Kids Meal</option>
+                        <option>Veg Biryani</option>
+                        <option>Chicken Biryani</option>
+
                         <option>No Preference</option>
                       </select>
                     </div>
