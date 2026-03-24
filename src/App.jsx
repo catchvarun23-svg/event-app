@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
-const API_URL = "/api/event";
+const EVENT_API_URL = "/api/event";
+const RSVP_API_URL = "/api/rsvp";
+const ADMIN_API_URL = "/api/admin";
 const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'change-me';
 
 const emptyMember = () => ({ name: '', relation: '', food: 'No Preference', notes: '' });
@@ -47,7 +49,7 @@ export default function App() {
       return;
     }
     try {
-      const res = await fetch(`${API_URL}?action=event`);
+      const res = await fetch(EVENT_API_URL);
       const data = await res.json();
       setEventData((prev) => ({ ...prev, ...data }));
       setError('');
@@ -120,7 +122,7 @@ export default function App() {
     };
 
     try {
-      const res = await fetch(API_URL, {
+      const res = await fetch(RSVP_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -156,7 +158,7 @@ export default function App() {
     setError('');
 
     try {
-      const res = await fetch(API_URL, {
+      const res = await fetch(ADMIN_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
