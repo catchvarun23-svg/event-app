@@ -234,8 +234,7 @@ export default function App() {
         <div className="card">
           <h2 className="section-title">Guest RSVP Form</h2>
 
-          {message ? <div className="success">{message}</div> : null}
-          {error ? <div className="error">{error}</div> : null}
+
 
           <div className="menu-box">
             <strong>Food Menu</strong>
@@ -363,6 +362,8 @@ export default function App() {
             </div>
 
             <button className="primary" type="submit">Submit RSVP</button>
+            {message ? <div className="success" style={{ marginTop: 12 }}>{message}</div> : null}
+{error ? <div className="error" style={{ marginTop: 12 }}>{error}</div> : null}
           </form>
         </div>
 
